@@ -1,4 +1,10 @@
-qqqq# Intro
+# Introduction: Practical SSL/TLS Attacks and Decrypting Web Traffic
+
+Chang Tan
+
+Lister Unlimited Cybersecurity Solutions, LLC.
+
+Work In Progress article on practical SSL/TLS Attacks anyone new to cybersecurity can figure out
 
 For the purposes of this chapter, both the terms SSL (Secure Sockets Layer) and TLS (Transport Layer Security) shall be used interchangably to explain the same thing, that is the end-to-end encryption scheme that secures modern day HTTPS implementations via TLS.
 
@@ -18,7 +24,7 @@ Assymetric encryption uses a system of private and public keys. And only the OPP
 
 Assymetric encryption provides additional layers of security by forcing both parties to prove themselves to be the legitimate authors and intended recipients of the message, because only the public key can be derived from the original private key and vice versa. However it is naturally assumed that the public key is to be shared while both messaging parties hold on to their private keys.
 
-And for that reason, assymetric encryption is widely chosen to securely transmit the private symmetric key over the wire via techniques such as handshakes, convoluted authentication methods, and standard textbook methods such as the Diffie-Hellman Exchange. 
+And for that reason, assymetric encryption is widely chosen to securely transmit the private symmetric key over the wire via techniques such as handshakes, convoluted authentication methods, and standard textbook methods such as the Diffie-Hellman Exchange. The assymetric encryption often uses a trusted Certificate Authority preinstalled on your phone or laptop to generate the proper session keys to allow the symmetric key to pass through safely and securely over the internet.
 
 It is this handshake that itself is encrypted, that starts off the authentication process for VPNs (OpenVPN, WireGuard, IPSec), secure HTTPS sessions on Amazon.com, and secure privacy-concious proxies (Shadowsocks, Privoxy, Tinyproxy, Squid). HTTPS and it's offspring, TLS, have been both praised and villified for both confronting the certain insecurity of the dying former internet (as each year passed, more have jumped on the encryption trend, and Google began penalizing the search results of web domains that do not support HTTPS), as well as being blamed for empowering cyber-criminals with TLS-secured phishing webpages and too-easy-to-trust Certificate Authorities (the LetsEncrypt app for generating self-signed certificates, and CloudFlare for their free TLS certificate deals).
 
@@ -170,9 +176,15 @@ Now start up Squid on the attacker machine.
 squid -d 10 && tail -f /usr/local/squid/var/logs/access.log
 ```
 
+![](https://raw.githubusercontent.com/tanc7/Practical-SSL-TLS-Attacks/master/readme_squid_sslbump.png.png)
+
 At this point, whenever someone on that machine attempts to use the browser, its web activity is automatically logged into /usr/local/squid/var/logs/access.log, including type of HTTP request, types of content downloaded, hostname and domain that the victim requested, etc.
 
+![](https://raw.githubusercontent.com/tanc7/Practical-SSL-TLS-Attacks/master/readme_squid_sslbump.png)
+
 You can view files in real time being downloaded off the wire, `tail -f /usr/local/squid/var/logs/store.log`.
+
+![](https://raw.githubusercontent.com/tanc7/Practical-SSL-TLS-Attacks/master/readme_squid_cached_store.png)
 
 	# Capturing unprotected traffic from Squid
 
@@ -206,7 +218,24 @@ Save the info and go to Capture ->
 				-> Options
 				-> Any
 
-Then in the bar enter `tcp.port==3128` and press Enter. Note that the connection will not be IMMEDIATELY decrypted. It can only decrypt the traffic that it captured the correct and whole handshake of. So to force reset your sessions restart your web browser and navigate to a HTTPS protected website.
+Then in the bar enter `tcp.port==3128` and press Enter. Note that the connection will not be IMMEDIATELY decrypted. It can only decrypt the traffic that it captured the correct and whole handshake of. 
+
+![](https://raw.githubusercontent.com/tanc7/Practical-SSL-TLS-Attacks/master/readme_wireshark_intercepted_handshake.png)
+
+As you can see, Squid proxy itself takes the reins in forging new certificates to be negotiated when traffic is being mitmed on port 3128. All that Squid requires is the original root key to make both server and client certificates and keys from. Note that this requires the browser to be configured to use localhost:3128 as a HTTP proxy. From Firefox, click on the hamburger icon, and select
+
+	-> Preferences
+		-> General
+		-> Network Proxy Settings
+		-> Manual Proxy Configuration
+
+Enter 127.0.0.1 for hostname and 3128 for port on HTTP proxy, then checkmark use this proxy server for all protocols (mandatory). And save your state. This needs to be done to the victim in all circumstances, or at least installed within the victim's cabundle.file to use the system-level key. For some distributions it's as easy as dropping a converted .crt file into /usr/local/share/ca-certificates, but for Red Hat distros, it involves locating the CA-Bundle, reopening it, dropping in your new .crt certificates, and rewrapping it: https://access.redhat.com/solutions/1549003
+
+![](https://raw.githubusercontent.com/tanc7/Practical-SSL-TLS-Attacks/master/readme_wireshark_handshake.png)
+
+So to force reset your sessions restart your web browser and navigate to a HTTPS protected website. A successfully decrypted HTTP request should look like this...
+
+![](https://raw.githubusercontent.com/tanc7/Practical-SSL-TLS-Attacks/master/readme_wireshark_decrypted.png)
 
 # The SSLDump Method
 
@@ -216,6 +245,21 @@ To decrypt packets and SSL/TLS sessions in real time without specifying a key, e
 
 If given a keyfile, such as the CA Private Key and Certificate generated by the Squid SSL-Bump server. You can enter it with the -k option, or `ssldump -i wlan0 -k /etc/squid/ssl_cert/myCA.pem -dHTe >out 2>&1 | tail -f out`. In this mode, SSLDump will work harder and attempt to decrypt everything that it can reach using the root certificate before resorting to the blind attacks before. 
 
+Here is a example of SSLDump running against my webpage. It's front end is secured with CloudFlare and its been configured to render the challenge screen for layer 7 attacks regardless of visitor intent (to mitigate bandwidth costs from attackers constantly trying to brute the server).
+
+When a visitor visits the webpage, CloudFlare's DNS will intercept it and the nameservers assigned from CloudFlare will return a HTTP error code 301 (redirect) and 302 (found).
+
+![](https://raw.githubusercontent.com/tanc7/Practical-SSL-TLS-Attacks/master/readme_ssldump_cloudflare_dns_redirect.png)
+
+CloudFlare immediately redirects you to the interactive challenge page for 5 seconds. After that, a cached copy of my real page gets retrieved from CloudFlare's Content Delivery Network.
+
+![](https://raw.githubusercontent.com/tanc7/Practical-SSL-TLS-Attacks/master/readme_ssldump_cloudflare_page.png)
+
+When the CloudFlare CDN finally redirects you to a cached copy of the page, you will get this.
+
+![](https://raw.githubusercontent.com/tanc7/Practical-SSL-TLS-Attacks/master/readme_ssldump_decrypted.png)
+
+Finally you visited listerunlimited.com, or more specifically a cached copy of it.
 
 
 # The Socat Relay Proxy Method
