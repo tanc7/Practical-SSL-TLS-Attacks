@@ -113,7 +113,7 @@ chown squid:squid -R /var/lib/ssl_db
 
 	# And lets configure the Squid configuration for it's first startup as a reversed intercept-proxy
 
-Edit the configuration file, noting the CORRECT configuration is in Squid's new installation directory, `nano /usr/local/bin/squid/etc/squid.conf`
+Edit the configuration file, noting the CORRECT configuration is in Squid's new installation directory, `nano /usr/local/squid/etc/squid.conf`
 
 And add the following lines to the bottom of the text file.
 
