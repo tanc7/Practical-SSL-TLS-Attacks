@@ -170,9 +170,15 @@ Now start up Squid on the attacker machine.
 squid -d 10 && tail -f /usr/local/squid/var/logs/access.log
 ```
 
+![](https://raw.githubusercontent.com/tanc7/Practical-SSL-TLS-Attacks/master/readme_squid_sslbump.png.png)
+
 At this point, whenever someone on that machine attempts to use the browser, its web activity is automatically logged into /usr/local/squid/var/logs/access.log, including type of HTTP request, types of content downloaded, hostname and domain that the victim requested, etc.
 
+![](https://raw.githubusercontent.com/tanc7/Practical-SSL-TLS-Attacks/master/readme_squid_sslbump.png)
+
 You can view files in real time being downloaded off the wire, `tail -f /usr/local/squid/var/logs/store.log`.
+
+![](https://raw.githubusercontent.com/tanc7/Practical-SSL-TLS-Attacks/master/readme_squid_cached_store.png)
 
 	# Capturing unprotected traffic from Squid
 
