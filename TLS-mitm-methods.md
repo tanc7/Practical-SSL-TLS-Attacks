@@ -1,4 +1,4 @@
-qqqq# Intro
+# Introduction: Practical SSL/TLS Attacks and Decrypting Web Traffic
 
 For the purposes of this chapter, both the terms SSL (Secure Sockets Layer) and TLS (Transport Layer Security) shall be used interchangably to explain the same thing, that is the end-to-end encryption scheme that secures modern day HTTPS implementations via TLS.
 
@@ -212,7 +212,24 @@ Save the info and go to Capture ->
 				-> Options
 				-> Any
 
-Then in the bar enter `tcp.port==3128` and press Enter. Note that the connection will not be IMMEDIATELY decrypted. It can only decrypt the traffic that it captured the correct and whole handshake of. So to force reset your sessions restart your web browser and navigate to a HTTPS protected website.
+Then in the bar enter `tcp.port==3128` and press Enter. Note that the connection will not be IMMEDIATELY decrypted. It can only decrypt the traffic that it captured the correct and whole handshake of. 
+
+![](https://raw.githubusercontent.com/tanc7/Practical-SSL-TLS-Attacks/master/readme_wireshark_intercepted_handshake.png)
+
+As you can see, Squid proxy itself takes the reins in forging new certificates to be negotiated when traffic is being mitmed on port 3128. All that Squid requires is the original root key to make both server and client certificates and keys from. Note that this requires the browser to be configured to use localhost:3128 as a HTTP proxy. From Firefox, click on the hamburger icon, and select
+
+	-> Preferences
+		-> General
+		-> Network Proxy Settings
+		-> Manual Proxy Configuration
+
+Enter 127.0.0.1 for hostname and 3128 for port on HTTP proxy, then checkmark use this proxy server for all protocols (mandatory). And save your state. This needs to be done to the victim in all circumstances, or at least installed within the victim's cabundle.file to use the system-level key. For some distributions it's as easy as dropping a converted .crt file into /usr/local/share/ca-certificates, but for Red Hat distros, it involves locating the CA-Bundle, reopening it, dropping in your new .crt certificates, and rewrapping it: https://access.redhat.com/solutions/1549003
+
+![](https://raw.githubusercontent.com/tanc7/Practical-SSL-TLS-Attacks/master/readme_wireshark_handshake.png)
+
+So to force reset your sessions restart your web browser and navigate to a HTTPS protected website. A successfully decrypted HTTP request should look like this...
+
+![](https://raw.githubusercontent.com/tanc7/Practical-SSL-TLS-Attacks/master/readme_wireshark_decrypted.png)
 
 # The SSLDump Method
 
