@@ -81,7 +81,7 @@ Get the newest version of Squid in it's source code format, ready for compilatio
 
 ```
 wget http://www.squid-cache.org/Versions/v4/squid-4.5.tar.gz
-untar xvz squid-4.5.tar.gz
+tar -xvzf squid-4.5.tar.gz
 cd squid-4.5
 ```
 
