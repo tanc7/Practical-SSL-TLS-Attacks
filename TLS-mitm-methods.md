@@ -264,7 +264,7 @@ Finally you visited listerunlimited.com, or more specifically a cached copy of i
 
 # The Socat Relay Proxy Method
 
-Netcat's cousin, socat is much like its former except it can handle SSL/TLS certificate authentication and verification, and because of that, is much more useful as both a penetration testing tool as well as a resource to generate on-the-fly networking objects (a HTTPS/TLS authenticating "server" or a "HTTPS proxy" for example).
+Netcadt's cousin, socat is much like its former except it can handle SSL/TLS certificate authentication and verification, and because of that, is much more useful as both a penetration testing tool as well as a resource to generate on-the-fly networking objects (a HTTPS/TLS authenticating "server" or a "HTTPS proxy" for example).
 
 Much like netcat relays can be formed from multiple instances of netcat, socat can create relay networks that serve as a reverse-proxy to a Squid attack proxy. If you want to reduce your attack surface and keep Squid firewalled from direct solicitation and entry, then you can simply allow connections from localhost:443 to localhost:3128 and leave port 443 exposed instead.
 
@@ -290,7 +290,7 @@ iptables -t nat -A PREROUTING -i wlan0  -p tcp --dport 80 -j REDIRECT --to-port 
 
 And check your iptables NAT table with `iptables -t nat -nvL`.
 
-Now generate your RSA key, your client and server Certificate Authority and key information. Make sure that for your FQDN (Fully Qualified Domain Name) information, REMEMBER to make up a fake hostname/domain for yourself. I chose squid.it, but you will need this information later for the certificate to be properly validated in web browsers of victims and for proper system-level installation. None of the other fields matter at all, just the FQDN question must be named 'squid.it' or `listerunlimited.com` or something.
+Now generate your RSA key, your client and server Certificate Authority and key information. Make sure that for your FQDN (Fully Qualified Domain Name) information,e REMEMBER to make up a fake hostname/domain for yourself. I chose squid.it, but you will need this information later for the certificate to be properly validated in web browsers of victims and for proper system-level installation. None of the other fields matter at all, just the FQDN question must be named 'squid.it' or `listerunlimited.com` or something.
 
 ```
 openssl genrsa -des3 -out ca.key 4096 
@@ -328,3 +328,64 @@ Lets say you want to login to SSH via a Squid HTTP proxy, `socat TCP-L:2222,fork
 
 
 # The mitmproxy method
+
+
+# Putting it all together, the Straight-Pipe Build Method
+
+Using what we have learned through usage of proxies, pivoting, credential sharing and generation, certificates on both clients and servers, and the idea of authenticated socat relays, we can come up with a method to...
+
+1. Boost download speeds of mass file downloads (individual files)
+2. Reduce processing power wasted on useless or unreachable HTTP requests that returned a 4xx code
+3. Clean up egress network traffic
+
+By installing a socat SSL relay IN FRONT of the Squid proxy and give it specific rules to permit only connections returning a 2xx or 3xx HTTP response code to let it download files more efficiently. Non-2xx or non-3xx responses are packets that will automatically be dropped using iptables rules and attackers must be able to successfully authenticate to the session's SSL/TLS certificate in order to compromise the more vulnerable proxies behind the relay.
+
+localhost:443 ----2xx or 3xx HTTP responses ONLY----> 192.168.122.1:3128 ----> 192.168.122.72:srcport
+
+Where 192.168.122.72 is the mass-downloading Windows machine making repeated HTTP crawler requests
+Where 192.168.122.1, also known as 192.168.1.8, or "localhost" is the KVM hypervisor host OS (Ubuntu, Debian, or Whonix preferably)
+Where localhost:443 is the socat SSL relay, fitted with special rules to ignore/drop non-2xx and non-3xx responses via iptablesWhere the srcport for 192.168.122.72 is a randomly opened TCP port used to initiate the initial HTTP request and awaiting a response. That machine will be instructed to timeout each port automatically after 20 seconds.
+Where the service of port 3128 on 192.168.122.1 is the Squid "attack proxy".
+
+The packets require explicit instructions telling the remote host to connect back on port 443, so...
+
+NAT ----> 192.168.1.8:443 ----> 192.168.122.1:3128 ----> 192.168.122.72:srcport
+
+The packets will need to be crafted via a ICAP server, with those specific instructions.
+
+The idea is to offload the strain of responding to invalid HTTP responses by the downloading machine, by simply dropping the packet instead of issuing a RST or FIN, or ACK+RST response. When a firewall blocks you with a ufw deny from host rule, it still illicits a response that is required from the operator of the firewall. Cunning attackers can overstrain this flaw to bring down firewalls, intrusion detection and prevention systems by eating up valuable resources that would have been better fit to serve requests from legitimate visitors.
+
+Since the TCP sourceport is still awaiting a response, we need to time-them-out to avoid having too many ports opened awaiting a response. 
+
+	# Add the ICAP server configuration to squid.conf
+
+	# Add iptables NAT filter rules to DROP instead of REJECT/DENY invalid HTTP responses
+
+	# Configure the socat relay
+
+	# Add a TCP 20-second timeout rule to the Windows host
+
+
+# Benefits of QUIC encapsulation
+
+QUIC is a relatively new UDP standard offered by Google. A side-effect is that network traffic can be smuggled past firewalls and intrusion detection systems (they don't even respond after a initial glance at the frame) and most cybersecurity vendors are behind on implementing a concise detection method of malicious traffic.
+
+This can play to our advantage. Socat supports the listening and forwarding of UDP traffic, as well as TCP in both IPv4 and IPv6 standards. What if essential command and control can be concealed within QUIC encapsulated and encrypted packets? QUIC, also known as Quick UDP Internet Connections (by multiplexing or "muxing"), it's implementation and propagation has spread thanks to the market saturation of Google Chrome and Android. 
+
+	# Nefarious uses of QUIC already exists
+
+Even as of right now, a service is automatically enabled in your Android phone to allow Google Chrome to automatically and periodically submit your location information, your cookies and credentials, your DNS queries and search results, to a remote server listening on clients4.google.com/chrome-sync/command/?. One of the purveyors of this information would be the Federal Bureau of Investigation, who can use Federal law to squelch Google from any advance warning of a investigation on a Google account. 
+
+Why am I blathering on about this? Because QUIC is the alternative protocol used to transmit this info, called UKMs, or URL-keyed Metrics in the form of both JSON and XML files back to Google's public cloud. And one way we can take advantage of QUIC, is to build a pluggable transport.
+
+	# Implementing QUIC encapsulation/encryption via pluggable transports
+
+Pluggable transports are commonly used as a supplementary service and obfuscation method to Tor. Standards such as scramblesuit, obfs3, obfs4, meek, have continually kept the users of Tor ahead when it comes to protecting their privacy against the efforts of their pursuers, whether it be a corrupt government, Mexican cartels, or cybercriminals. What generally happens, is something around the lines of, "The NSA cracked Tor's obfs3 mechanism and erryone shits their pants", and after a good 6 months of living in relative terror, someone brings up a new method to add a additional layer of security and make it "secure" again.
+
+It's also important to note that regular Tor users do not automatically get the benefits of obfs4. It usually starts off as either meek or obfs3 for Android phones with Orbot installed. You must acquire obfs4 relays with the proper keys and configuration from the Tor project's associates themselves and manually configure your Tor and obfs4proxy client to use obfs4. Success is not guaranteed, but Whonix builds seem to have much better success in connecting to obfs4 enabled relays. 
+
+	# Fun Fact: TAILS is immune to orthodox reverse-shells. Albeit not immune to asynchronous Remote Access Trojans that can navigate onionland and I2P.
+
+TAILS seems to have a bit of trouble, but thats because it uses two different networking standards, obfs3/4 and I2P and it totally shuns standard TCP/UDP connections as a security measure. It is actually impossible for a malicious reverse shell to be able to connect back to a IPv4 or IPv6 C2 address due to the nature of TAILS's networking stack. Whatever malware must be configured to navigate onionland to be able to connect back, or use Tor endpoint-resolved Dynamic DNS, that returns a .onion address. 
+
+Now that doesn't mean your exploit didn't work. It is running perfectly fine on that TAILS box as a background process. But it can never call home if all it can do is IPv4 and IPv6. Must be able to understand onionland and the Tor method of DNS resolution. And the Tor method of DNS resolution comes down to this, the DNS query is passed all the way to the last endpoint, and that endpoint has the responsibility of returning it's response. Hence resolving hostnames can be very cumbersome and slow for Tor users but there are other methods being drawn up right now. I am simply using Whonix as the example.
