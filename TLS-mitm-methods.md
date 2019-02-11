@@ -1,5 +1,11 @@
 # Introduction: Practical SSL/TLS Attacks and Decrypting Web Traffic
 
+Chang Tan
+
+Lister Unlimited Cybersecurity Solutions, LLC.
+
+Work In Progress article on practical SSL/TLS Attacks anyone new to cybersecurity can figure out
+
 For the purposes of this chapter, both the terms SSL (Secure Sockets Layer) and TLS (Transport Layer Security) shall be used interchangably to explain the same thing, that is the end-to-end encryption scheme that secures modern day HTTPS implementations via TLS.
 
 A lot of people know the consequences of compromised credentials but fail to put that knowledge into practice by successfully simulating a mitm-attack and reusing known credentials to decrypt seemingly unbreakable ciphertext. In this example, the author will go over at a minimum, five different methods to decrypt SSL/TLS traffic.
@@ -18,7 +24,7 @@ Assymetric encryption uses a system of private and public keys. And only the OPP
 
 Assymetric encryption provides additional layers of security by forcing both parties to prove themselves to be the legitimate authors and intended recipients of the message, because only the public key can be derived from the original private key and vice versa. However it is naturally assumed that the public key is to be shared while both messaging parties hold on to their private keys.
 
-And for that reason, assymetric encryption is widely chosen to securely transmit the private symmetric key over the wire via techniques such as handshakes, convoluted authentication methods, and standard textbook methods such as the Diffie-Hellman Exchange. 
+And for that reason, assymetric encryption is widely chosen to securely transmit the private symmetric key over the wire via techniques such as handshakes, convoluted authentication methods, and standard textbook methods such as the Diffie-Hellman Exchange. The assymetric encryption often uses a trusted Certificate Authority preinstalled on your phone or laptop to generate the proper session keys to allow the symmetric key to pass through safely and securely over the internet.
 
 It is this handshake that itself is encrypted, that starts off the authentication process for VPNs (OpenVPN, WireGuard, IPSec), secure HTTPS sessions on Amazon.com, and secure privacy-concious proxies (Shadowsocks, Privoxy, Tinyproxy, Squid). HTTPS and it's offspring, TLS, have been both praised and villified for both confronting the certain insecurity of the dying former internet (as each year passed, more have jumped on the encryption trend, and Google began penalizing the search results of web domains that do not support HTTPS), as well as being blamed for empowering cyber-criminals with TLS-secured phishing webpages and too-easy-to-trust Certificate Authorities (the LetsEncrypt app for generating self-signed certificates, and CloudFlare for their free TLS certificate deals).
 
